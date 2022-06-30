@@ -1,8 +1,8 @@
 # LitHub
 Summer 2021 SyBBURE VIX Project - Making Gidhub Popping!
 
-[Ignore these for now]
-## Installation
+
+## Installation [Ignore these for now]
 0. Install Conda (https://docs.conda.io/projects/conda/en/latest/user-guide/install/)
 1. git clone https://github.com/EthanHNguyen/LitHub/
 2. conda env create --file env.yml
