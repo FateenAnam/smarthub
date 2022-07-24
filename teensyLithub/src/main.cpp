@@ -63,27 +63,16 @@ int ledFrontL = 0; //left side index
 ArduinoQueue<int> chaseIndexFrontR(1800); //Q to go right
 ArduinoQueue<int> chaseIndexFrontL(1800); //Q to go left
 
-//backside
-int ledBackR = 0; //right side index
-int ledBackL = 0; //left side index
-ArduinoQueue<int> chaseIndexBackR(1800); //Q to go right
-ArduinoQueue<int> chaseIndexBackL(1800); //Q to go lef
-
-
 
 // Define volume bars
-VirtualStrip frontLeftStrip(leds, 0, 54);
-VirtualStrip frontRightStrip(leds, 86, 54, true);
-
-
+VirtualStrip frontLeftStrip(leds, 0, Front_Left_Top-Front_Left_Bottom);
+VirtualStrip frontRightStrip(leds, Front_Right_Top,Front_Right_Bottom-Front_Right_Top, true);
 // Define ceiling bars
-VirtualStrip frontCeilingStrip(leds, 55, 30);
-
-// Master ceiling
-VirtualStrip ceilingStrip(leds, 0, 144);
+VirtualStrip frontCeilingStrip(leds, Front_Left_Top, Front_Right_Top-Front_Left_Top);
+// Master strip
+VirtualStrip ceilingStrip(leds, 0, 144);  
 
 //meteor variales
-
 struct trailLED;
 struct trailLED{
   int index;
