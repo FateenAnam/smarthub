@@ -28,7 +28,7 @@
 #define DATA_PIN_A 6
 #define DATA_PIN_V 7
 
-#define NUM_LEDS 299   //Variable
+#define NUM_LEDS 258   //Variable
 #define LED_PIN 1     //Variable
 CRGB leds[NUM_LEDS];
 #define DATA_PIN_1 LED_PIN //LED_PIN
@@ -45,18 +45,18 @@ unsigned int sample;
 //UPDATE THESE VARIABLES
 /////////////////
 int Front_Left_Bottom = 0;
-int Front_Left_Top = 120;
+int Front_Left_Top = 100;
  int Front_Right_Bottom = NUM_LEDS;
- int Front_Right_Top = 240;
+ int Front_Right_Top = 158;
 CRGB leds_1[NUM_LEDS]; // the main LED
 
 // Define volume bars
-VirtualStrip frontLeftStrip(leds, Front_Left_Bottom, Front_Left_Top-Front_Left_Bottom);
-VirtualStrip frontRightStrip(leds, Front_Right_Top,Front_Right_Bottom-Front_Right_Top, true);
+VirtualStrip frontLeftStrip(leds, Front_Left_Bottom, Front_Left_Top-Front_Left_Bottom-3);
+VirtualStrip frontRightStrip(leds, Front_Right_Top,Front_Right_Bottom-Front_Right_Top-3, true);
 // Define ceiling bars
-VirtualStrip frontCeilingStrip(leds, Front_Left_Top, Front_Right_Top-Front_Left_Top);
+VirtualStrip frontCeilingStrip(leds, Front_Left_Top, Front_Right_Top-Front_Left_Top-3);
 // Master strip
-VirtualStrip masterStrip(leds, Front_Left_Bottom, NUM_LEDS);  
+VirtualStrip masterStrip(leds, Front_Left_Bottom, NUM_LEDS-3);  
 
 
 //chasing variables
@@ -100,11 +100,11 @@ void setup() {
   FastLED.setBrightness(BRIGHTNESS);
   FastLED.setMaxPowerInVoltsAndMilliamps(12, 2000);   //Why?????
 
-  pinMode(DATA_PIN_A, INPUT);
-  pinMode(DATA_PIN_B, INPUT);
-  pinMode(DATA_PIN_C, INPUT);
-  pinMode(DATA_PIN_D, INPUT);
-  pinMode(DATA_PIN_V, INPUT);
+  // pinMode(DATA_PIN_A, INPUT);
+  // pinMode(DATA_PIN_B, INPUT);
+  // pinMode(DATA_PIN_C, INPUT);
+  // pinMode(DATA_PIN_D, INPUT);
+  // pinMode(DATA_PIN_V, INPUT);
 }
 
 int startTime = millis();
@@ -120,10 +120,11 @@ int stateD=0;
 
 void loop() {
   //movingRainbow();
-  // on();
- 
+
+
 // reactive();
-  // Serial.println(analogRead(A5));
+// Serial.println(analogRead(A5));
+
 //solid(CRGB::Red);
 //on();
 
@@ -132,7 +133,7 @@ void loop() {
   solid(CRGB::Black);
   nightSky();  //recommended delay 100
   meteor();  //must add delay of >20
-  delay(30);  
+ delay(30);  
   }
   else{
     reactive();
@@ -209,7 +210,7 @@ void on(){
   int index=1;
   // int rearRightDifference =frontLeftStrip.getLength()- rearRightStrip.getLength();
   // int rearLeftDifference =frontLeftStrip.getLength()- rearLeftStrip.getLength();
-  while(index<masterStrip.getLength()-1){
+  while(index<masterStrip.getLength()){
 
     if(index<frontLeftStrip.getLength()){
       frontLeftStrip[index-1]=CHSV(gHue, 255, 255);
@@ -479,7 +480,7 @@ int volumeBarColor = 2;  //Variable
   }
 
   //chasing 
-  int middlefront = Front_Left_Top+ frontCeilingStrip.getLength()/2;  //VARIABLE 
+  int middlefront = Front_Left_Top+ frontCeilingStrip.getLength()/2-4;  //VARIABLE 
    int middleleft = frontLeftStrip.getLength()/2; //VARIABLE
    int middleright = Front_Right_Top+ frontRightStrip.getLength()/2; //VARIABLE 
 
