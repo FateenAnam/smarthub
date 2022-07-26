@@ -1,60 +1,65 @@
 #include "FastLED.h"
+#include <ArduinoQueue.h>
+#include <VirtualStrip.h>
+#include <Wire.h>
+#include <SPI.h>
+#include <SPI.h> 
+#include<time.h>
+#include<stdio.h>
 
-// #include <OctoWS2811.h>
-
+#define DATA_PIN_D 3
+#define DATA_PIN_C 4
+#define DATA_PIN_B 5
+#define DATA_PIN_A 6
+#define DATA_PIN_V 7
 // #include <Adafruit_NeoPixel.h>
 // #ifdef __AVR__
 //  #include <avr/power.h> // Required for 16 MHz Adafruit Trinket
 // #endif
 
-#include <ArduinoQueue.h>
-#include <VirtualStrip.h>
 //#include <Audio.h>
-#include <Wire.h>
-#include <SPI.h>
 //#include <SD.h>
 //#include <SerialFlash.h>
 //#include <usb_audio.h>
-
-#include <SPI.h> 
 //#include <SD.h>
 
 
-#include<time.h>
-#include<stdio.h>
 
-#define NUM_LEDS 144   //Variable
-#define LED_PIN 2      //Variable
 
+#define NUM_LEDS 258   //Variable
+#define LED_PIN 1     //Variable
+
+//declare strip 
 CRGB leds[NUM_LEDS];
 
 #define DATA_PIN_1 LED_PIN //LED_PIN
 
 int bright = 50; //variable
 #define BRIGHTNESS bright    
-
-int ledNewOn = NUM_LEDS; // How many LEDS to turn on
+int ledNewOn = NUM_LEDS; // How many LEDS to turn on     
 const int sampleWindow = 50; // Sample window width in mS (50 mS = 20Hz)
-int microphonePin = A0;    // select the input pin for the potentiometer   //variable
+int microphonePin = A5;    // select the input pin for the potentiometer   //variable
 unsigned int sample;
 
-// int Left_Bottom = 0;
-// int ceiling = 50;
-// int Right_Bottom = 80;
 
+//Update these variables depending on how you want to set up the strip
+/////////////////
+int strip_start = 0;
+int strip_top_left_corner = 97;
+ int strip_end = NUM_LEDS;
+ int strip_top_right_corner = 155;
+CRGB led_strip[NUM_LEDS]; // the main LED
+
+
+//mode declarations
 void on();
 void solid(CRGB color);
 void movingRainbow();
 void reactive();
 void nightSky();
 void meteor();
+void pomodoro();
 
-/////////////////
-int Front_Left_Bottom = 0;
-int Front_Left_Top = 54;
-CRGB leds_1[NUM_LEDS]; // Left wall
- int Front_Right_Bottom = 144;
- int Front_Right_Top = 87;
 
 //chasing variables
 //front side
@@ -65,14 +70,14 @@ ArduinoQueue<int> chaseIndexFrontL(1800); //Q to go left
 
 
 // Define volume bars
-VirtualStrip frontLeftStrip(leds, 0, Front_Left_Top-Front_Left_Bottom);
-VirtualStrip frontRightStrip(leds, Front_Right_Top,Front_Right_Bottom-Front_Right_Top, true);
+VirtualStrip left_strip(leds, 0, strip_top_left_corner-strip_start);
+VirtualStrip right_strip(leds, strip_top_right_corner+1,strip_end-strip_top_right_corner-2, true);
 // Define ceiling bars
-VirtualStrip frontCeilingStrip(leds, Front_Left_Top, Front_Right_Top-Front_Left_Top);
+VirtualStrip top_strip(leds, strip_top_left_corner+3, strip_top_right_corner-strip_top_left_corner-2);
 // Master strip
-VirtualStrip ceilingStrip(leds, 0, 144);  
+VirtualStrip masterStrip(leds, 0, NUM_LEDS);  
 
-//meteor variales
+//meteor variables
 struct trailLED;
 struct trailLED{
   int index;
@@ -80,7 +85,6 @@ struct trailLED{
   int saturation;
   int brightness;
 };
-
 
 ArduinoQueue<trailLED> trailQueue(1800); //Q for trail
 ArduinoQueue<trailLED> meteorQueue(1800); //Q for meteor
@@ -93,64 +97,60 @@ typedef void (*SimplePatternList[])();
 
 uint8_t gCurrentPatternNumber = 0; // Index number of which pattern is current
 uint8_t gHue = 100; // rotating "base color" used by many of the patterns
-
-// VirtualStrip leftBottom (leds, 0, 50, false);
-// VirtualStrip ceilingT (leds, 51, 30, false);
-// VirtualStrip rightBottom (leds, 82, 50, true);
-//VirtualStrip ceilingStrip(leds, 0, 130, false);
-//chasing variables
-//front side
-// int ledFrontR = 0; //right side index
-// int ledFrontL = 0; //left side index
-// ArduinoQueue<int> chaseIndexFrontR(1800); //Q to go right
-// ArduinoQueue<int> chaseIndexFrontL(1800); //Q to go left
-
-// //backside
-// int ledBackR = 0; //right side index
-// int ledBackL = 0; //left side index
-// ArduinoQueue<int> chaseIndexBackR(1800); //Q to go right
-// ArduinoQueue<int> chaseIndexBackL(1800); //Q to go left
-// Adafruit_NeoPixel strip = Adafruit_NeoPixel(150, LED_PIN, NEO_GRB + NEO_KHZ800);
  
 void setup() {
   Serial.begin(9600);
   
-  // Adafruit_NeoPixel strip = Adafruit_NeoPixel(150, LED_PIN, NEO_GRB + NEO_KHZ800);
-  // strip.begin();
-  // strip.show();
-  // strip.setBrightness(100);
-  
-
-  
   FastLED.addLeds<WS2811, LED_PIN, BRG> (leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
   FastLED.setBrightness(BRIGHTNESS);
   FastLED.setMaxPowerInVoltsAndMilliamps(12, 2000);
+
+  pinMode(DATA_PIN_A, INPUT);
+  pinMode(DATA_PIN_B, INPUT);
+  pinMode(DATA_PIN_C, INPUT);
+  pinMode(DATA_PIN_D, INPUT);
+  pinMode(DATA_PIN_V, INPUT);
 }
+
+int startTime = millis();
+int cycle =60;  //VARIABLE 
+int fullTurn= 0;
+
+
+
+int stateA=0;
+int stateB=0;
+int stateC=0;
+int stateD=0;
+
 
 void loop() {
-  // for (int i = 0; i < NUM_LEDS; i++) {
-  //   leds[i] = CRGB(255, 255, 255);
-  // }
-  //FastLED.show();
+//uncomment function for mode
 
-  //solid(CRGB::Blue);
-  //movingRainbow();
-// on();
-  reactive();
- //  nightSky();
- //  meteor();
-   Serial.println(analogRead(A0));
-   delay(30);
-  // leds[99] = CRGB::Blue;
+//solid(CRGB::Blue);
+//movingRainbow();
+//on();
+//reactive();
+//nightSky();
+//meteor();
+//pomodoro();
+
+//----------------------------------------------------------------
+//Meteor with Night Sky. Must follow this order and add delay
+  if(((millis()/1000)%cycle)<cycle/2){  //VARIABLE
+  solid(CRGB::Black);
+  nightSky();  //recommended delay 100
+  meteor();  //must add delay of >20
+  delay(25);
+  }
+  else{
+    reactive();
+  }
+//----------------------------------------------------------------
+
   FastLED.show();
-  // for(int i = 0; i < 1; i++) {
-  //   strip.setPixelColor(i, strip.Color(255, 255, 255));
-  // }
-  // //strip.setPixelColor(60, strip.Color(255, 255, 255));
-  
-  // strip.show();
-  
 }
+  
 
 int meteorTip=0;
   uint8_t hueTip=100;
@@ -165,20 +165,20 @@ void meteor(){
 // (meteorTip+2)<strip.getLength();
 
  //while(true){
-    if (meteorTip>=ceilingStrip.getLength()-5){
+    if (meteorTip>=masterStrip.getLength()-5){
       meteorTip=0;
     }
     
     //make tip bright
-    ceilingStrip[meteorTip]=CHSV(hueTip,255,initialBrightness); // (hue,saturation, brightness)
-    ceilingStrip[meteorTip+1]=CHSV(hueTip,saturation,100);
+    masterStrip[meteorTip]=CHSV(hueTip,255,initialBrightness); // (hue,saturation, brightness)
+    masterStrip[meteorTip+1]=CHSV(hueTip,saturation,100);
 
     
     //light trail
     for (int i = 0; i < trailQueue.itemCount(); ++i) {
       ledToBeAdded1 = trailQueue.dequeue();
     
-      ceilingStrip[ledToBeAdded1.index]=CHSV(ledToBeAdded1.color+rand()%30,ledToBeAdded1.saturation,ledToBeAdded1.brightness);
+      masterStrip[ledToBeAdded1.index]=CHSV(ledToBeAdded1.color+rand()%30,ledToBeAdded1.saturation,ledToBeAdded1.brightness);
       
       if(rand()%4==0){
         ledToBeAdded1.brightness = (rand() % ledToBeAdded1.brightness + 1);
@@ -187,7 +187,7 @@ void meteor(){
       if (ledToBeAdded1.brightness>10){
         trailQueue.enqueue(ledToBeAdded1);
       }else{
-        ceilingStrip[ledToBeAdded1.index]=CRGB::Black;
+        masterStrip[ledToBeAdded1.index]=CRGB::Black;
       }
 
   }
@@ -207,151 +207,34 @@ void meteor(){
     //printf(sample);
     
     meteorTip+=1;
-  
 
 }
 
 void on(){
 
   solid(CRGB::Black);
-
-  //On animation
-
+  //startup animation
   
   //Up from floors
   int index=1;
-  // int rearRightDifference =frontLeftStrip.getLength()- rearRightStrip.getLength();
-  // int rearLeftDifference =frontLeftStrip.getLength()- rearLeftStrip.getLength();
-  while(index<frontLeftStrip.getLength()-1){
+  while(index<left_strip.getLength()-1){
 
-    if(index<frontLeftStrip.getLength()-1){
-      frontLeftStrip[index-1]=CHSV(gHue, 255, 255);
-      frontLeftStrip[index]=CHSV(gHue, 255, 255);
-      frontLeftStrip[index+1]=CHSV(gHue, 255, 255);
+    if(index<left_strip.getLength()-1){
+      left_strip[index-1]=CHSV(gHue, 255, 255);
+      left_strip[index]=CHSV(gHue, 255, 255);
+      left_strip[index+1]=CHSV(gHue, 255, 255);
     }
 
-    if(index<frontRightStrip.getLength()-1){
-      frontRightStrip[index-1]=CHSV(gHue, 255, 255);
-      frontRightStrip[index]=CHSV(gHue, 255, 255);
-      frontRightStrip[index+1]=CHSV(gHue, 255, 255);
+    if(index<right_strip.getLength()-1){
+      right_strip[index-1]=CHSV(gHue, 255, 255);
+      right_strip[index]=CHSV(gHue, 255, 255);
+      right_strip[index+1]=CHSV(gHue, 255, 255);
     }
-    
-    // if(index-rearRightDifference<rearRightStrip.getLength()-1 and index>rearRightDifference){
-    //   rearRightStrip[index-1-rearRightDifference]=CHSV(gHue, 255, 255);
-    //   rearRightStrip[index-rearRightDifference]=CHSV(gHue, 255, 255);
-    //   rearRightStrip[index+1-rearRightDifference]=CHSV(gHue, 255, 255);
-    // }
-    
-    // if(index-rearLeftDifference<rearLeftStrip.getLength()-1 and index>rearLeftDifference){
-    //   rearLeftStrip[index-1-rearLeftDifference]=CHSV(gHue, 255, 255);
-    //   rearLeftStrip[index-rearLeftDifference]=CHSV(gHue, 255, 255);
-    //   rearLeftStrip[index+1-rearLeftDifference]=CHSV(gHue, 255, 255);
-    // }
-    
 
     index+=3;
     gHue+=3;
     FastLED.show();
   }
-
-
-  //ceiling
-  // index=1;
-  // while(index<rightCeilingStrip.getLength()){
-
-  //   if(index<frontCeilingStrip.getLength()-1){
-  //     frontCeilingStrip[index-1]=CHSV(gHue, 255, 255);
-  //     frontCeilingStrip[index]=CHSV(gHue, 255, 255);
-  //     frontCeilingStrip[index+1]=CHSV(gHue, 255, 255);
-  //   }
-
-  //   if(index<rightCeilingStrip.getLength()-1){
-  //     rightCeilingStrip[index-1]=CHSV(gHue, 255, 255);
-  //     rightCeilingStrip[index]=CHSV(gHue, 255, 255);
-  //     rightCeilingStrip[index+1]=CHSV(gHue, 255, 255);
-  //   }
-    
-  //   if(index<leftCeilingStrip.getLength()-1){
-  //     leftCeilingStrip[index-1]=CHSV(gHue, 255, 255);
-  //     leftCeilingStrip[index]=CHSV(gHue, 255, 255);
-  //     leftCeilingStrip[index+1]=CHSV(gHue, 255, 255);
-  //   }
-    
-  //   if(index<rearCeilingStrip.getLength()-1){
-  //     rearCeilingStrip[index-1]=CHSV(gHue, 255, 255);
-  //     rearCeilingStrip[index]=CHSV(gHue, 255, 255);
-  //     rearCeilingStrip[index+1]=CHSV(gHue, 255, 255);
-  //   }
-
-  //   index+=3;
-  //   gHue+=3;
-  //   FastLED.show();
-  // }
-
-  // //ceiling go to constant hue
-  // gHue=0;
-  // int decrementIndex = frontLeftStrip.getLength()-1;
-  // int incrementIndex = 1;
-  // index=1;
-  // while(incrementIndex<rightCeilingStrip.getLength()-1){
-  //   index = incrementIndex;
-  //   if(index<frontCeilingStrip.getLength()-1){
-  //     frontCeilingStrip[index-1]=CHSV(gHue, 255, 255);
-  //     frontCeilingStrip[index]=CHSV(gHue, 255, 255);
-  //     frontCeilingStrip[index+1]=CHSV(gHue, 255, 255);
-  //   }
-
-  //   if(index<rightCeilingStrip.getLength()-1){
-  //     rightCeilingStrip[index-1]=CHSV(gHue, 255, 255);
-  //     rightCeilingStrip[index]=CHSV(gHue, 255, 255);
-  //     rightCeilingStrip[index+1]=CHSV(gHue, 255, 255);
-  //   }
-    
-  //   if(index<leftCeilingStrip.getLength()-1){
-  //     leftCeilingStrip[index-1]=CHSV(gHue, 255, 255);
-  //     leftCeilingStrip[index]=CHSV(gHue, 255, 255);
-  //     leftCeilingStrip[index+1]=CHSV(gHue, 255, 255);
-  //   }
-    
-  //   if(index<rearCeilingStrip.getLength()-1){
-  //     rearCeilingStrip[index-1]=CHSV(gHue, 255, 255);
-  //     rearCeilingStrip[index]=CHSV(gHue, 255, 255);
-  //     rearCeilingStrip[index+1]=CHSV(gHue, 255, 255);
-  //   }
-    
-
-  //   //push down to reactive offset
-  //   index=decrementIndex;
-  //   if(index>50){
-  //     frontLeftStrip[index-1]=CRGB::Black;
-  //     frontLeftStrip[index]=CRGB::Black;
-  //     frontLeftStrip[index+1]=CRGB::Black;
-  //   }
-
-  //   if(index>50){
-  //     frontRightStrip[index-1]=CRGB::Black;
-  //     frontRightStrip[index]=CRGB::Black;
-  //     frontRightStrip[index+1]=CRGB::Black;
-  //   }
-    
-  //   if(index - rearRightDifference>50){
-  //     rearRightStrip[index-1-rearRightDifference]=CRGB::Black;
-  //     rearRightStrip[index-rearRightDifference]=CRGB::Black;
-  //     rearRightStrip[index+1-rearRightDifference]=CRGB::Black;
-  //   }
-    
-  //    if(index - rearLeftDifference> 2){
-  //     rearLeftStrip[index-1-rearLeftDifference-1]=CRGB::Black;
-  //     rearLeftStrip[index-rearLeftDifference-1]=CRGB::Black;
-  //     rearLeftStrip[index+1-rearLeftDifference-1]=CRGB::Black;
-  //   }
-
-    
-  //   incrementIndex+=3;
-  //   decrementIndex-=1;
-  //   FastLED.show();
-  // }
-
 }
 
 void nightSky(){
@@ -361,7 +244,7 @@ void nightSky(){
 
     if(random>80){
       
-      ledToBeAdded.index=rand()%ceilingStrip.getLength();
+      ledToBeAdded.index=rand()%masterStrip.getLength();
       //ledToBeAdded.index=index;
       ledToBeAdded.brightness=0;
       ledToBeAdded.saturation=rand()%50;
@@ -377,7 +260,7 @@ void nightSky(){
       {
         ledToBeAdded.brightness+=rand()%15;
         brightStar.enqueue(ledToBeAdded);
-        ceilingStrip[ledToBeAdded.index]= CHSV(ledToBeAdded.color, ledToBeAdded.saturation, ledToBeAdded.brightness);
+        masterStrip[ledToBeAdded.index]= CHSV(ledToBeAdded.color, ledToBeAdded.saturation, ledToBeAdded.brightness);
 
       }else{
         dimStar.enqueue(ledToBeAdded);
@@ -395,21 +278,16 @@ void nightSky(){
       {
         ledToBeAdded.brightness-=rand()%15;
         dimStar.enqueue(ledToBeAdded);
-        ceilingStrip[ledToBeAdded.index] = CHSV(ledToBeAdded.color, ledToBeAdded.saturation, ledToBeAdded.brightness);
+        masterStrip[ledToBeAdded.index] = CHSV(ledToBeAdded.color, ledToBeAdded.saturation, ledToBeAdded.brightness);
       }else{
-        ceilingStrip[ledToBeAdded.index] = CRGB::Black;
+        masterStrip[ledToBeAdded.index] = CRGB::Black;
       }
-
-
-    }   
-
+    }  
 }
 
 
-
-
 void reactive() {
-    //  **********************************************************************
+  //  **********************************************************************
   //   Read from microphone
   //  **********************************************************************
   unsigned long startMillis = millis(); // Start of sample window
@@ -436,44 +314,38 @@ void reactive() {
     }
   }
 
+
+
+//Calculate Volume Bar New LEDS
   peakToPeak = signalMax - signalMin;  // max - min = peak-peak amplitude
 
   double volts = (peakToPeak * 5.0) / 1024;  // convert to volts
 
-  ledNewOn = ceil(volts * 37.5) + 50;
-
-  // Cut-off at NUM_LEDS
+  ledNewOn = ceil(volts * 37.5);     //VARIABLE
+  // Cut-off at NUM_LEDS and Left Strip
   if (ledNewOn > NUM_LEDS) {
     ledNewOn = NUM_LEDS;
   }
+  if (ledNewOn > strip_top_left_corner) {
+    ledNewOn = strip_top_left_corner-5;
+  }
+   Serial.println(ledNewOn);
+
+
 
   for (int i = 0; i < NUM_LEDS; ++i) {
-    leds_1[i] = CRGB::Black;
-    // leds_2[i] = CRGB::Black;
-    // leds_3[i] = CRGB::Black;
+    masterStrip[i] = CRGB::Black;
   }
-
-  if (ledNewOn > 163) {
-    ledNewOn = 163;
-  }
-
-   for (int i = 0; i < ledNewOn; ++i) {
-     leds_1[Front_Left_Bottom + i] = CHSV(i + gHue, 255, 255);
-     leds_1[Front_Right_Bottom - i] = CHSV(i + gHue, 255, 255);
-    //  leds_3[min(Rear_Right_Bottom, Rear_Right_Bottom - i + 14)] = CHSV(i + gHue, 255, 255);
-    //  leds_1[Rear_Left_Bottom - i + 67] = CHSV(i + gHue, 255, 255);
-   }
 
   for (int i = 0; i < ledNewOn; ++i) {
-     frontLeftStrip[i] = CHSV(i + gHue, 255, 255);
-     frontRightStrip[i] = CHSV(i + gHue, 255, 255);
-    //  rearLeftStrip[max(i - 67, 0)] = CHSV(i + gHue, 255, 255);
-    //  rearRightStrip[max(0, i - 14)] = CHSV(i + gHue, 255, 255);
+     left_strip[i] = CHSV((i*6 + gHue), 255, 255);     //VARIABLE constants multiplied
+     right_strip[i] = CHSV(i*6 + gHue, 255, 255);      //VARIABLE constants multiplied
    }
 
+
   // Ceiling Rainbow Bar
-  for (int i = 0; i < ceilingStrip.getLength(); ++i) {
-    ceilingStrip[i] = CHSV(gHue, 255, 255);
+  for (int i = 0; i < top_strip.getLength()-4; ++i) {   
+    top_strip[i] = CHSV(gHue+i*7, 255, 255);       //VARIABLE constants multiplied
   }
 
   // Shift color;
@@ -486,133 +358,110 @@ void reactive() {
   }
 
   //chasing 
-  int middlefront = frontLeftStrip.getLength()+ frontCeilingStrip.getLength()/2;
-  // int middleback = frontCeilingStrip.getLength() + rightCeilingStrip.getLength()+ rearCeilingStrip.getLength()/2;
-   int middleleft = frontLeftStrip.getLength()/2;
-   int middleright = frontRightStrip.getLength()/2;
+  int middlefront = strip_top_left_corner+ top_strip.getLength()/2 - 2;           //VARIABLE 
+  int middleleft = left_strip.getLength()/2;                                  //VARIABLE
+  int middleright = strip_top_right_corner+ right_strip.getLength()/2;        //VARIABLE 
 
-  int size = 9;
-  int speed = 11; //size should be more than speed
-  int offset = size + 2*speed; 
+  int size = 2;   //used to be 9                                              //VARIABLE 
+  int speed = 3; //size should be more than speed                             //VARIABLE 
+  int offset = size + 2*speed;                                                //VARIABLE 
 
-  //front side
-  if(ledNewOn > 120){
+int chaserTrigger = 90;                                                       //VARIABLE 
+  //front side 
+  if(ledNewOn > chaserTrigger){  //This value Triggers the Chasers            //VARIABLE
     chaseIndexFrontR.enqueue(middlefront);
     chaseIndexFrontL.enqueue(middlefront);
   }
 
-  //right side
+   // //right side
     for (int i = 0; i < chaseIndexFrontR.itemCount(); ++i) {
       ledFrontR = chaseIndexFrontR.dequeue();
     
-
       for(int i = (-size); i<=size ;++i){
-        ceilingStrip[ledFrontR+i] = CRGB::White;
-        
+        masterStrip[ledFrontR+i] = CRGB::White;
       }
 
       //if wont go off end of strip, increment
       if (ledFrontR <= middleright) { 
         chaseIndexFrontR.enqueue(ledFrontR + speed);
       }
+    }
 
-  
-  }
   //left side
-  for (int i = 0; i < chaseIndexFrontL.itemCount(); ++i) {
-      
+  for (int i = 0; i < chaseIndexFrontL.itemCount(); ++i) {     
       ledFrontL = chaseIndexFrontL.dequeue();
 
       for(int i = (-size); i<=size ;++i){
-        ceilingStrip[ledFrontL+i] = CRGB::White;
+        masterStrip[ledFrontL+i] = CRGB::White;
       }
 
       //if wont go off end of strip, decrement
-
       if(( ledFrontL>= middleleft) or (middlefront >= ledFrontL and ledFrontL>= 0+offset)){ 
           chaseIndexFrontL.enqueue(ledFrontL - speed);
-      }else if(ledFrontL < 0+offset) {
-          chaseIndexFrontL.enqueue(ceilingStrip.getLength()-size-1);
       }
-  }
-
+      // else if(ledFrontL < 0+offset) {
+      //     chaseIndexFrontL.enqueue(masterStrip.getLength()-size-1);
+      // }
+   }
 
   //middle shooter
-  int numMiddleOn = ledNewOn/4-13;
+  int numMiddleOn = ledNewOn/7;                                               //VARIABLE
   for(int i = (-numMiddleOn); i<=numMiddleOn ;++i){
-        ceilingStrip[middlefront+i] = CRGB::White;
-  }
-
-
-
-
-
-
-  //     //if wont go off end of strip, increment
-  //     if (ledBackL <=middleleft) { 
-  //       chaseIndexBackL.enqueue(ledBackL + speed);
-      
-  //     }
-
-  // }
-
-
-  FastLED.show();
+        masterStrip[middlefront+i+2] = CRGB::White;
+  } 
 }
-
-
-
 
 void solid(CRGB color){
   //turn everything off
-  for(int i=0;i<ceilingStrip.getLength();++i){
-    ceilingStrip[i]=color;
+  for(int i=0;i<masterStrip.getLength();++i){
+    masterStrip[i]=color;
   }
 
-  for(int i=0;i<frontRightStrip.getLength();++i){
-    frontRightStrip[i]=color;
+  for(int i=0;i<right_strip.getLength();++i){
+    right_strip[i]=color;
   }
 
-  for(int i=0;i<frontLeftStrip.getLength();++i){
-    frontLeftStrip[i]=color;
+  for(int i=0;i<left_strip.getLength();++i){
+    left_strip[i]=color;
   }
-
-  // for(int i=0;i<rearLeftStrip.getLength();++i){
-  //   rearLeftStrip[i]=color;
-  // }
-
-  //  for(int i=0;i<rearRightStrip.getLength();++i){
-  //   rearRightStrip[i]=color;
-  // }
-
-  // for(int i=0;i<rearLeftStrip.getLength();++i){
-  //   rearLeftStrip[i]=color;
-  // }
 }
 
 void solidfade(int color, int saturation, int brightness){
+
   //turn everything off
-  for(int i=0;i<ceilingStrip.getLength();++i){
-    ceilingStrip[i]=CHSV(color,saturation,brightness);
+  for(int i=0;i<masterStrip.getLength();++i){
+    masterStrip[i]=CHSV(color,saturation,brightness);
   }
 
-  for(int i=0;i<frontRightStrip.getLength();++i){
-    frontRightStrip[i]=CHSV(color,saturation,brightness);
+  for(int i=0;i<right_strip.getLength();++i){
+    right_strip[i]=CHSV(color,saturation,brightness);
   }
 
-  for(int i=0;i<frontLeftStrip.getLength();++i){
-    frontLeftStrip[i]=CHSV(color,saturation,brightness);
+  for(int i=0;i<left_strip.getLength();++i){
+    left_strip[i]=CHSV(color,saturation,brightness);
   }
+}
 
-  // for(int i=0;i<rearLeftStrip.getLength();++i){
-  //   rearLeftStrip[i]=CHSV(color,saturation,brightness);
-  // }
-
-  //  for(int i=0;i<rearRightStrip.getLength();++i){
-  //   rearRightStrip[i]=CHSV(color,saturation,brightness);
-  // }
-
-  // for(int i=0;i<rearLeftStrip.getLength();++i){
-  //   rearLeftStrip[i]=CHSV(color,saturation,brightness);
-  // }
+void pomodoro() {
+  int count = 0;
+  int studyTime = 25; //Variable 
+  int visual = NUM_LEDS/studyTime;
+  int increment = visual;
+  if(startTime%60000 == 0 && count < studyTime) {  //every minute
+    for(int i = 0; i < visual; i++) {
+      left_strip[i] = CRGB::Green;
+      right_strip[i] = CRGB::Green;
+      FastLED.show();
+    } 
+    visual+= increment;
+    count++;
+  }
+  else {
+    solid(CRGB::Red);
+    solid(CRGB::Black);
+    solid(CRGB::Red);
+    delay(300000);  //5 minute break
+    count = 0; 
+    visual = increment;
+  }
 }
