@@ -59,7 +59,7 @@ void reactive();
 void nightSky();
 void meteor();
 void pomodoro();
-
+void theaterChase(CRGB color, int wait);
 
 //chasing variables
 //front side
@@ -126,7 +126,7 @@ int stateD=0;
 
 void loop() {
 //uncomment function for mode
-
+//theaterChase(CRGB::LightCoral, 10);
 //solid(CRGB::Blue);
 //movingRainbow();
 //on();
@@ -137,15 +137,15 @@ void loop() {
 
 //----------------------------------------------------------------
 //Meteor with Night Sky. Must follow this order and add delay
-  if(((millis()/1000)%cycle)<cycle/2){  //VARIABLE
-  solid(CRGB::Black);
+  // if(((millis()/1000)%cycle)<cycle/2){  //VARIABLE
+  // solid(CRGB::Black);
   nightSky();  //recommended delay 100
   meteor();  //must add delay of >20
   delay(25);
-  }
-  else{
-    reactive();
-  }
+  // }
+  // else{
+  //   reactive();
+  // }
 //----------------------------------------------------------------
 
   FastLED.show();
@@ -444,24 +444,42 @@ void solidfade(int color, int saturation, int brightness){
 
 void pomodoro() {
   int count = 0;
-  int studyTime = 25; //Variable 
-  int visual = NUM_LEDS/studyTime;
-  int increment = visual;
-  if(startTime%60000 == 0 && count < studyTime) {  //every minute
-    for(int i = 0; i < visual; i++) {
+  int studyTime = 5; //Variable 
+  int visual_left = strip_top_left_corner/studyTime;
+  int visual_right = strip_top_right_corner/studyTime;
+  int increment = visual_left;
+  for(int i = 0; i < studyTime; i++) {
+    for(int i = 0; i < visual_left; i++) {
       left_strip[i] = CRGB::Green;
       right_strip[i] = CRGB::Green;
+      
       FastLED.show();
+
     } 
-    visual+= increment;
-    count++;
+    
+    visual_left+= increment;
+    delay(60000);
   }
-  else {
-    solid(CRGB::Red);
+  
+    theaterChase(CRGB::Red, 50);
     solid(CRGB::Black);
-    solid(CRGB::Red);
+    FastLED.show();
     delay(300000);  //5 minute break
     count = 0; 
-    visual = increment;
+    visual_left = increment;
+  
+}
+
+void theaterChase(CRGB color, int wait) {
+  for(int a=0; a<30; a++) {  // Repeat 30 times...
+    for(int b=0; b<3; b++) { //  'b' counts from 0 to 2...
+      FastLED.clear();         //   Set all pixels in RAM to 0 (off)
+      // 'c' counts up from 'b' to end of strip in steps of 3...
+      for(int c=b; c<NUM_LEDS; c += 3) {
+        leds[c] = color; // Set pixel 'c' to value 'color'
+      }
+      FastLED.show(); // Update strip with new contents
+      delay(wait);  // Pause for a moment
+    }
   }
 }
