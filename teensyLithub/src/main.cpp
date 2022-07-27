@@ -27,11 +27,12 @@
 
 
 #define NUM_LEDS 258   //Variable
+#define BOX_NUM_LEDS 37
 #define LED_PIN 1     //Variable
-
+#define LED_BOX_PIN 9
 //declare strip 
 CRGB leds[NUM_LEDS];
-
+CRGB box[BOX_NUM_LEDS];
 #define DATA_PIN_1 LED_PIN //LED_PIN
 
 int bright = 50; //variable
@@ -54,12 +55,14 @@ CRGB led_strip[NUM_LEDS]; // the main LED
 //mode declarations
 void on();
 void solid(CRGB color);
+void boxWhite();
 void movingRainbow();
 void reactive();
 void nightSky();
 void meteor();
 void pomodoro();
 void theaterChase(CRGB color, int wait);
+void boxChase(CRGB color, int wait);
 
 //chasing variables
 //front side
@@ -76,6 +79,8 @@ VirtualStrip right_strip(leds, strip_top_right_corner+1,strip_end-strip_top_righ
 VirtualStrip top_strip(leds, strip_top_left_corner+3, strip_top_right_corner-strip_top_left_corner-2);
 // Master strip
 VirtualStrip masterStrip(leds, 0, NUM_LEDS);  
+// Box strip
+VirtualStrip box_strip(box, 0, BOX_NUM_LEDS);
 
 //meteor variables
 struct trailLED;
@@ -102,6 +107,7 @@ void setup() {
   Serial.begin(9600);
   
   FastLED.addLeds<WS2811, LED_PIN, BRG> (leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
+  FastLED.addLeds<WS2811, LED_BOX_PIN, BRG> (box, BOX_NUM_LEDS).setCorrection(TypicalLEDStrip);
   FastLED.setBrightness(BRIGHTNESS);
   FastLED.setMaxPowerInVoltsAndMilliamps(12, 2000);
 
@@ -130,18 +136,20 @@ void loop() {
 //solid(CRGB::Blue);
 //movingRainbow();
 //on();
-//reactive();
+reactive();
 //nightSky();
 //meteor();
 //pomodoro();
+//boxChase(CRGB::LightCoral, 10);
+boxWhite();
 
 //----------------------------------------------------------------
 //Meteor with Night Sky. Must follow this order and add delay
   // if(((millis()/1000)%cycle)<cycle/2){  //VARIABLE
   // solid(CRGB::Black);
-  nightSky();  //recommended delay 100
-  meteor();  //must add delay of >20
-  delay(25);
+  // nightSky();  //recommended delay 100
+  // meteor();  //must add delay of >20
+  // delay(25);
   // }
   // else{
   //   reactive();
@@ -481,5 +489,26 @@ void theaterChase(CRGB color, int wait) {
       FastLED.show(); // Update strip with new contents
       delay(wait);  // Pause for a moment
     }
+  }
+}
+
+void boxChase(CRGB color, int wait) {
+    for(int a=0; a<30; a++) {  // Repeat 30 times...
+        for(int b=0; b<3; b++) { //  'b' counts from 0 to 2...
+          FastLED.clear();         //   Set all pixels in RAM to 0 (off)
+          // 'c' counts up from 'b' to end of strip in steps of 3...
+          for(int c=b; c<BOX_NUM_LEDS; c += 3) {
+            box[c] = color; // Set pixel 'c' to value 'color'
+          }
+          FastLED.show(); // Update strip with new contents
+          delay(wait);  // Pause for a moment
+        }
+      }
+}
+
+void boxWhite() {
+  // int hue = 100;
+  for(int i=0;i<box_strip.getLength();++i){
+    box_strip[i]= CHSV(100, 0, 255);
   }
 }
